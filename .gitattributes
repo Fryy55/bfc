@@ -1,1 +1,2 @@
 cmake/CPM.cmake linguist-vendored
+test/**/*.bf linguist-vendored
