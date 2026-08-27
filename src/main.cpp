@@ -1,4 +1,5 @@
 #include "CLIArgs.hpp"
+#include "DataManager.hpp"
 #include "compile.hpp"
 
 
@@ -13,19 +14,20 @@ int main(int argc, char** argv) {
 	}
 
 	CLIArgs const& args = parser.result();
+	DataManager::get()->setArgs(args);
 	if (args.help) {
 		parser.printHelp();
 		return 0;
 	} else if (args.version) {
-		std::puts("Brainfuck Compiler v" BFC_VERSION);
+		std::puts("\e[34mBrainfuck Compiler v" BFC_VERSION "\e[0m");
 		return 0;
 	}
 
 	if (!args.source) {
-		std::puts("Error: Missing argument 'SOURCE'");
+		std::puts("\e[31mError: Missing argument 'SOURCE'\e[0m");
 		parser.printHelp();
 		return 1;
 	}
 
-	return compile(args);
+	return compile();
 }
