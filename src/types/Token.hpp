@@ -17,9 +17,12 @@ struct Token final {
 
 	constexpr Token(Type type) : type{ type } {}
 	constexpr Token(
-		Type type, std::size_t backRef
-	) : backRef{ backRef }, type{ type } {}
+		Type type, std::uint64_t refVal
+	) : refVal{ refVal }, type{ type } {}
 
-	std::size_t backRef;
+	constexpr operator bool() const noexcept { return valid; }
+
+	std::uint64_t refVal;
 	Type type;
+	bool valid = true;
 };

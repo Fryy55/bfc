@@ -3,8 +3,9 @@
 #include "DataManager.hpp"
 #include "printCompileError.hpp"
 #include "generateContext.hpp"
+#include "build.hpp"
 
-#include <fmt/base.h>
+#include <fmt/color.h>
 
 #include <fstream>
 #include <filesystem>
@@ -26,19 +27,19 @@ static bool parseBatch(std::string_view data) noexcept {
 
 		switch (data[i]) {
 			case '>':
-				tokens.emplace_back(Token::Type::Right);
+				tokens.emplace_back(Token::Type::Right, 1u);
 				break;
 
 			case '<':
-				tokens.emplace_back(Token::Type::Left);
+				tokens.emplace_back(Token::Type::Left, 1u);
 				break;
 
 			case '+':
-				tokens.emplace_back(Token::Type::Plus);
+				tokens.emplace_back(Token::Type::Plus, 1u);
 				break;
 
 			case '-':
-				tokens.emplace_back(Token::Type::Minus);
+				tokens.emplace_back(Token::Type::Minus, 1u);
 				break;
 
 			case '.':
@@ -62,6 +63,7 @@ static bool parseBatch(std::string_view data) noexcept {
 					);
 					return false;
 				}
+				tokens[loops.top()].refVal = tokens.size();
 				tokens.emplace_back(Token::Type::CloseLoop, loops.top());
 				loops.pop();
 				break;
@@ -90,14 +92,20 @@ int compile() noexcept {
 	auto source = args.source.value();
 
 	if (args.cmd) {
-		std::puts("-- Compiling source from the command line");
+		fmt::println(
+			"-- Compiling source from the command line with level {} optimizations",
+			args.o
+		);
 		if (!parseBatch(source))
 			return 1;
 	} else {
-		fmt::println("-- Compiling source from file '{}'", source);
+		fmt::println(
+			"-- Compiling source from file '{}' with level {} optimizations",
+			source, args.o
+		);
 		std::ifstream I{ fs::path{ args.source.value() } };
 		if (!I) {
-			fmt::println("\e[31m-- Error: can't open file '{}'\e[0m", source);
+			fmt::println(fmt::fg(fmt::color::crimson), "-- Error: can't open file '{}'", source);
 			return 1;
 		}
 
@@ -109,18 +117,15 @@ int compile() noexcept {
 		}
 		if (!parseBatch({ buf.data(), static_cast<std::size_t>(I.gcount()) }))
 			return 1;
-
-		if (!DataManager::get()->getLoops().empty()) {
-			printCompileError(
-				generateContext(
-					{ buf.data(), static_cast<std::size_t>(I.gcount()) },
-					I.gcount() - 1z
-				),
-				"A `[` command somewhere isn't closed; expected `]`"
-			);
-			return 1;
-		}
 	}
 
-	return 0;
+	if (!DataManager::get()->getLoops().empty()) {
+		printCompileError(
+			generateContext({}, 0z),
+			"A `[` command somewhere isn't closed; expected `]`"
+		);
+		return 1;
+	}
+
+	return build();
 }

@@ -36,7 +36,7 @@ public:
 	std::size_t& getColumn() noexcept { return m_column; }
 	std::array<char, 64z>& getContext() noexcept { return m_context; }
 
-private:
+private: // Fields
 	std::stack<std::size_t> m_loops{};
 	std::vector<Token> m_tokens{};
 	CLIArgs const* m_args;
