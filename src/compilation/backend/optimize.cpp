@@ -4,6 +4,8 @@
 
 #include <fmt/ranges.h>
 
+#include <ranges>
+
 std::string_view foo(Token::Type x) noexcept {
 	switch (x) {
 		case Token::Type::Right:
@@ -48,7 +50,7 @@ void optimize() noexcept {
 	CLIArgs const& args = dm->getArgs();
 	auto& tokens = dm->getTokens();
 
-	fmt::println("O0\n{}", fmt::join(tokens | std::views::enumerate, "\n"));
+	fmt::println("O0\n{}", fmt::join(std::views::zip(std::views::iota(0), tokens), "\n"));
 
 	if (args.o == 0u)
 		return;
@@ -64,10 +66,10 @@ void optimize() noexcept {
 				it->valid = false;
 		}
 	}
-	fmt::println("\nO1\n{}", fmt::join(tokens | std::views::enumerate, "\n"));
+	fmt::println("\nO1\n{}", fmt::join(std::views::zip(std::views::iota(0), tokens), "\n"));
 	if (args.o >= 2u) {
 
 	}
-	fmt::println("\nO2\n{}", fmt::join(tokens | std::views::enumerate, "\n"));
+	fmt::println("\nO2\n{}", fmt::join(std::views::zip(std::views::iota(0), tokens), "\n"));
 	return;
 }

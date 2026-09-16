@@ -9,6 +9,7 @@
 
 #include <fstream>
 #include <filesystem>
+#include <new>
 
 namespace fs = std::filesystem;
 
@@ -79,10 +80,10 @@ static bool parseBatch(std::string_view data) noexcept {
 	}
 
 
-	auto rit = data.rbegin();
 	context = {};
-	for (std::int_fast16_t i = context.size() - 1u; 0u <= i && rit != data.rend(); --i)
-		context[i] = *(rit++);
+	auto size = std::min(context.size(), data.size());
+	if (size != 0z)
+		std::memcpy(context.end() - size, data.end() - size, size);
 
 	return true;
 }
