@@ -8,17 +8,11 @@
 
 std::string_view foo(Token::Type x) noexcept {
 	switch (x) {
-		case Token::Type::Right:
-			return "Right";
+		case Token::Type::Shift:
+			return "Shift";
 
-		case Token::Type::Left:
-			return "Left";
-
-		case Token::Type::Plus:
-			return "Plus";
-
-		case Token::Type::Minus:
-			return "Minus";
+		case Token::Type::Add:
+			return "Add";
 
 		case Token::Type::Out:
 			return "Out";
@@ -50,7 +44,8 @@ void optimize() noexcept {
 	CLIArgs const& args = dm->getArgs();
 	auto& tokens = dm->getTokens();
 
-	fmt::println("O0\n{}", fmt::join(std::views::zip(std::views::iota(0), tokens), "\n"));
+	if (args.debugPrints)
+		fmt::println("O0\n{}", fmt::join(std::views::zip(std::views::iota(0z), tokens), "\n"));
 
 	if (args.o == 0u)
 		return;
@@ -61,15 +56,56 @@ void optimize() noexcept {
 			if (it == tokens.end() || it->type != Token::Type::OpenLoop)
 				break;
 
-			auto targetIndex = it->refVal;
-			for (; it.index() != targetIndex + 1z; ++it)
+			for (auto targetIndex = it->refVal; it.index() != targetIndex + 1z; ++it)
 				it->valid = false;
 		}
-	}
-	fmt::println("\nO1\n{}", fmt::join(std::views::zip(std::views::iota(0), tokens), "\n"));
-	if (args.o >= 2u) {
 
+		if (args.debugPrints)
+			fmt::println("\nO1\n{}", fmt::join(std::views::zip(std::views::iota(0z), tokens), "\n"));
 	}
-	fmt::println("\nO2\n{}", fmt::join(std::views::zip(std::views::iota(0), tokens), "\n"));
+
+	if (args.o >= 2u) {
+		using Type = Token::Type;
+
+		auto lastTokenType = static_cast<Type>(0u);
+		Token* lastToken = nullptr;
+		auto updateLastToken = [&lastToken](Token* token) noexcept {
+			if (lastToken && lastToken->refVal == 0)
+				lastToken->valid = false;
+			lastToken = token;
+		};
+
+		for (auto& token : TokensIterator{}) {
+			if (token.type != lastTokenType) {
+				switch (token.type) {
+					case Type::Shift:
+						updateLastToken(&token);
+						lastTokenType = Type::Shift;
+						break;
+
+					case Type::Add:
+						updateLastToken(&token);
+						lastTokenType = Type::Add;
+						break;
+
+					default:
+						updateLastToken(nullptr);
+						lastTokenType = Type::None;
+						break;
+				}
+				continue;
+			}
+
+			// of last type
+			token.valid = false;
+			lastToken->refVal += token.refVal;
+		}
+
+		updateLastToken(nullptr);
+
+		if (args.debugPrints)
+			fmt::println("\nO2\n{}", fmt::join(std::views::zip(std::views::iota(0), tokens), "\n"));
+	}
+
 	return;
 }

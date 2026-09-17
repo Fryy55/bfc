@@ -28,19 +28,19 @@ static bool parseBatch(std::string_view data) noexcept {
 
 		switch (data[i]) {
 			case '>':
-				tokens.emplace_back(Token::Type::Right, 1u);
+				tokens.emplace_back(Token::Type::Shift, 1);
 				break;
 
 			case '<':
-				tokens.emplace_back(Token::Type::Left, 1u);
+				tokens.emplace_back(Token::Type::Shift, -1);
 				break;
 
 			case '+':
-				tokens.emplace_back(Token::Type::Plus, 1u);
+				tokens.emplace_back(Token::Type::Add, 1);
 				break;
 
 			case '-':
-				tokens.emplace_back(Token::Type::Minus, 1u);
+				tokens.emplace_back(Token::Type::Add, -1);
 				break;
 
 			case '.':

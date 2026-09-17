@@ -19,6 +19,7 @@ struct CLIArgs final {
 	bool version = false;
 	bool cmd = false;
 	bool dump = false;
+	bool debugPrints = false;
 
 	static constexpr std::string_view Description{ "Brainfuck Compiler" };
 	static constexpr std::tuple Options{
@@ -28,12 +29,13 @@ struct CLIArgs final {
 		slic::Option{ "-O0", &CLIArgs::o0, "Disable all optimizations" },
 		slic::Option{ "-O1", &CLIArgs::o1, "Enable dead code elimination optimizations when possible (default)" },
 		slic::Option{ "-O2", &CLIArgs::o2, "Enable all -O1 optimizations + instruction collapsing (e.g. consecutive `+`s become a single add instruction)" },
+		slic::Option{ "--cli-source", "-c", &CLIArgs::cmd, "Read source code directly from the command string instead of the file specified by that string" },
 		slic::Option{ "--linker", "-L", &CLIArgs::linker, "Linker to use for the final executable (default `/usr/bin/ld`)" },
 		slic::Option{ "--linker-options", "-l", &CLIArgs::linkerOptions, "Options passed to the linker (default none)" },
 		slic::Option{ "--output", "-o", &CLIArgs::outFile, "Output file name (default `a.out`)" },
 		slic::Option{ "--dump", "-d", &CLIArgs::dump, "Dump object files into current working directory post compilation instead of linking them" },
 		slic::Option{ "--tmp-dir", "-T", &CLIArgs::tempDir, "Directory to use for temporary object files storage (default `/tmp`)" },
-		slic::Option{ "--cli-source", "-c", &CLIArgs::cmd, "Read source code directly from the command string instead of the file specified by that string" },
+		slic::Option{ "--debug-prints", &CLIArgs::debugPrints, "Print debug data for optimization passes. Mainly useful for the development of the compiler itself" },
 		slic::Arg{ "SOURCE", &CLIArgs::source, "Source file/string" }
 	};
 };

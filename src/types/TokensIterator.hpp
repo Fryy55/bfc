@@ -93,5 +93,3 @@ private: // Fields
 
 	Token* m_ptr = nullptr;
 };
-
-static inline TokensIterator tokensIt{};
