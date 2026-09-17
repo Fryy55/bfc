@@ -10,7 +10,7 @@ public:
 	TempFile(TempFile const&) noexcept = default;
 	TempFile& operator=(TempFile const&) noexcept = default;
 	TempFile(TempFile&&) noexcept = default;
-	TempFile& operator=(TempFile&&) noexcept;
+	TempFile& operator=(TempFile&&) noexcept = default;
 	
 	~TempFile() noexcept;
 

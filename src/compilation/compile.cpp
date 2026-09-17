@@ -4,6 +4,7 @@
 #include "printCompileError.hpp"
 #include "generateContext.hpp"
 #include "build.hpp"
+#include "optimize.hpp"
 
 #include <fmt/color.h>
 
@@ -127,6 +128,8 @@ int compile() noexcept {
 		);
 		return 1;
 	}
+
+	optimize();
 
 	return build();
 }

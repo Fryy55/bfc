@@ -21,6 +21,7 @@ TempFile::TempFile(std::string_view filename) noexcept {
 			fmt::fg(fmt::color::crimson),
 			"-- Error: couldn't access file path '{}'", std::move(path)
 		);
+		return;
 	}
 
 	fs::create_directories(m_path.parent_path(), ec);
