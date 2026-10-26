@@ -72,6 +72,10 @@ void optimize() noexcept {
 		auto updateLastToken = [&lastToken](Token* token) noexcept {
 			if (lastToken && lastToken->refVal == 0)
 				lastToken->valid = false;
+
+			if (lastToken && lastToken->valid && lastToken->type == Type::Add)
+				lastToken->refVal %= 256u;
+
 			lastToken = token;
 		};
 

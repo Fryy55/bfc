@@ -1,5 +1,6 @@
 #pragma once
 
+#include <fstream>
 #include <filesystem>
 
 
@@ -18,7 +19,16 @@ public:
 	operator bool() const noexcept { return m_valid; }
 
 	[[nodiscard]] std::string getPath() const noexcept;
-	[[nodiscard]] std::filebuf getWriteBuf() const noexcept;
+	[[nodiscard]] std::filebuf getWriteBuf() noexcept;
+
+	template <typename T>
+	[[nodiscard]] static char* ptr(T* data) noexcept {
+		return reinterpret_cast<char*>(data);
+	}
+	template <typename T>
+	[[nodiscard]] static char* ptr(T& data) noexcept {
+		return reinterpret_cast<char*>(&data);
+	}
 
 private: // Fields
 	std::filesystem::path m_path;

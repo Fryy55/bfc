@@ -4,8 +4,6 @@
 
 #include <fmt/color.h>
 
-#include <fstream>
-
 namespace fs = std::filesystem;
 
 
@@ -35,6 +33,9 @@ TempFile::TempFile(std::string_view filename) noexcept {
 }
 
 TempFile::~TempFile() noexcept {
+	if (DataManager::get()->getArgs().dump)
+		return;
+
 	std::error_code ec;
 	fs::remove(m_path, ec);
 	if (ec) {
@@ -51,9 +52,15 @@ std::string TempFile::getPath() const noexcept {
 	return m_path.string();
 }
 
-std::filebuf TempFile::getWriteBuf() const noexcept {
+std::filebuf TempFile::getWriteBuf() noexcept {
 	std::filebuf ret{};
-	ret.open(m_path, std::ios::out | std::ios::binary);
+	if (!ret.open(m_path, std::ios::out | std::ios::binary)) {
+		m_valid = false;
+			fmt::println(
+			fmt::fg(fmt::color::crimson),
+			"-- Error: couldn't open file '{}' for writing", m_path.string()
+		);
+	}
 
 	return ret;
 }
