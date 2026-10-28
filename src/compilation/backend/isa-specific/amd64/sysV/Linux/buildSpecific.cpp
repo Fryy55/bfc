@@ -2,8 +2,10 @@
 
 #include "endianConvert.hpp"
 
-#include <vector>
 #include <elf.h>
+
+#include <vector>
+#include <array>
 #include <cstring>
 
 
@@ -19,7 +21,7 @@ int buildSpecific(TempFile& file) noexcept {
 
 		section header table
 
-		section header string table
+		section string table
 		symbol string table
 
 		symbol table
@@ -50,6 +52,7 @@ int buildSpecific(TempFile& file) noexcept {
 	auto text = generateText();
 
 
+//* elf header
 	Elf64_Ehdr elfHeader;
 
 	elfHeader.e_ident[EI_MAG0] = 0x7f;
@@ -81,6 +84,7 @@ int buildSpecific(TempFile& file) noexcept {
 
 
 //* section header table
+	// null
 	Elf64_Shdr nullSectHeader;
 
 	nullSectHeader.sh_name = 0u;
@@ -95,17 +99,18 @@ int buildSpecific(TempFile& file) noexcept {
 	nullSectHeader.sh_entsize = 0u;
 
 	buf.sputn(TempFile::ptr(nullSectHeader), sizeof(nullSectHeader));
+	std::size_t curOffset = sizeof(elfHeader) + sizeof(Elf64_Shdr) * sectionHeaderCount;
 
 
+	// .shstrtab
 	rodata auto sectStrTableName = name(".shstrtab");
-	rodata std::size_t sectStrTableOffset = sizeof(elfHeader) + sizeof(Elf64_Shdr) * sectionHeaderCount;
 	Elf64_Shdr sectionStringHeader;
 
 	endianConvert(sectionStringHeader.sh_name, sectStrTableName);
 	endianConvert(sectionStringHeader.sh_type, SHT_STRTAB);
 	sectionStringHeader.sh_flags = 0u;
 	sectionStringHeader.sh_addr = 0u;
-	endianConvert(sectionStringHeader.sh_offset, sectStrTableOffset);
+	endianConvert(sectionStringHeader.sh_offset, curOffset);
 	endianConvert(sectionStringHeader.sh_size, sectionStringTable.size());
 	sectionStringHeader.sh_link = 0u;
 	sectionStringHeader.sh_info = 0u;
@@ -113,17 +118,18 @@ int buildSpecific(TempFile& file) noexcept {
 	sectionStringHeader.sh_entsize = 0u;
 
 	buf.sputn(TempFile::ptr(sectionStringHeader), sizeof(sectionStringHeader));
+	curOffset += sectionStringTable.size();
 
 
+	// .strtab
 	rodata auto symStrTableName = name(".strtab");
-	rodata std::size_t symStrTableOffset = sectStrTableOffset + sectionStringTable.size();
 	Elf64_Shdr symbolStringHeader;
 
 	endianConvert(symbolStringHeader.sh_name, symStrTableName);
 	endianConvert(symbolStringHeader.sh_type, SHT_STRTAB);
-	symbolStringHeader.sh_flags = 0u;
+	endianConvert(symbolStringHeader.sh_flags, SHF_ALLOC);
 	symbolStringHeader.sh_addr = 0u;
-	endianConvert(symbolStringHeader.sh_offset, symStrTableOffset);
+	endianConvert(symbolStringHeader.sh_offset, curOffset);
 	endianConvert(symbolStringHeader.sh_size, symbolStringTable.size());
 	symbolStringHeader.sh_link = 0u;
 	symbolStringHeader.sh_info = 0u;
@@ -131,20 +137,37 @@ int buildSpecific(TempFile& file) noexcept {
 	symbolStringHeader.sh_entsize = 0u;
 
 	buf.sputn(TempFile::ptr(symbolStringHeader), sizeof(symbolStringHeader));
+	curOffset += symbolStringTable.size();
 
 
-	//! symtab
+	// .symtab
+	rodata auto symTabName = name(".symtab");
+	Elf64_Shdr symbolTableHeader;
+
+	endianConvert(symbolTableHeader.sh_name, symTabName);
+	endianConvert(symbolTableHeader.sh_type, SHT_SYMTAB);
+	endianConvert(symbolTableHeader.sh_flags, SHF_ALLOC);
+	symbolTableHeader.sh_addr = 0u;
+	endianConvert(symbolTableHeader.sh_offset, curOffset);
+	endianConvert(symbolTableHeader.sh_size, sizeof(Elf64_Sym) * symbolCount);
+	endianConvert(symbolTableHeader.sh_link, 2u); // associated strtab
+	symbolTableHeader.sh_info = 0u;
+	endianConvert(symbolTableHeader.sh_addralign, 1u);
+	endianConvert(symbolTableHeader.sh_entsize, sizeof(Elf64_Sym));
+
+	buf.sputn(TempFile::ptr(symbolTableHeader), sizeof(symbolTableHeader));
+	curOffset += sizeof(Elf64_Sym) * symbolCount;
 
 
+	// .text
 	rodata auto textName = name(".text");
-	rodata std::size_t textOffset = symStrTableOffset + symbolStringTable.size();
 	Elf64_Shdr textHeader;
 
 	endianConvert(textHeader.sh_name, textName);
 	endianConvert(textHeader.sh_type, SHT_PROGBITS);
 	endianConvert(textHeader.sh_flags, SHF_ALLOC | SHF_EXECINSTR);
 	textHeader.sh_addr = 0u;
-	endianConvert(textHeader.sh_offset, textOffset);
+	endianConvert(textHeader.sh_offset, curOffset);
 	endianConvert(textHeader.sh_size, text.size());
 	textHeader.sh_link = 0u;
 	textHeader.sh_info = 0u;
@@ -152,16 +175,39 @@ int buildSpecific(TempFile& file) noexcept {
 	textHeader.sh_entsize = 0u;
 
 	buf.sputn(TempFile::ptr(textHeader), sizeof(textHeader));
+	curOffset += text.size();
 
 
 //* section data
 	buf.sputn(sectionStringTable.data(), sectionStringTable.size());
 	buf.sputn(symbolStringTable.data(), symbolStringTable.size());
 
-	//* symbol table
+	// .symtab
+	Elf64_Sym nullSym;
+
+	nullSym.st_name = 0u;
+	nullSym.st_value = 0u;
+	nullSym.st_size = 0u;
+	nullSym.st_info = 0u;
+	nullSym.st_other = 0u;
+	endianConvert(nullSym.st_shndx, SHN_UNDEF);
+
+	buf.sputn(TempFile::ptr(nullSym), sizeof(nullSym));
 
 
-	//* text
+	Elf64_Sym startSym;
+
+	endianConvert(startSym.st_name, 1u);
+	startSym.st_value = 0u;
+	endianConvert(startSym.st_size, 8u);
+	startSym.st_info = 0u;
+	endianConvert(startSym.st_other, );
+	endianConvert(startSym.st_shndx, 4u); // .text shtab index
+
+	buf.sputn(TempFile::ptr(startSym), sizeof(startSym));
+
+
+	// .text
 	buf.sputn(TempFile::ptr(text.data()), text.size());
 
 	return 0;
