@@ -21,8 +21,8 @@ static bool parseBatch(std::string_view data) noexcept {
 	static auto& column = dm->getColumn();
 	static auto& line = dm->getLine();
 	static auto& context = dm->getContext();
-	static auto& loops = DataManager::get()->getLoops();
-	static auto& tokens = DataManager::get()->getTokens();
+	static auto& loops = dm->getLoops();
+	static auto& tokens = dm->getTokens();
 
 
 	for (std::size_t i = 0z; i < data.size(); ++i) {

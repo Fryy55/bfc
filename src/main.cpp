@@ -26,7 +26,13 @@ int main(int argc, char** argv) {
 	}
 
 	if (!args.source) {
-		std::puts("Error: Missing argument 'SOURCE'");
+		fmt::println(fmt::emphasis::bold, "Error: Missing argument 'SOURCE'\n");
+		parser.printHelp();
+		return 1;
+	}
+
+	if (args.tapeSize == 0u) {
+		fmt::println(fmt::emphasis::bold, "Error: Tape size cannot be 0\n");
 		parser.printHelp();
 		return 1;
 	}

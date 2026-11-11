@@ -9,6 +9,9 @@
 
 class DataManager final {
 public:
+	using Stack = std::stack<std::size_t, std::vector<std::size_t>>;
+
+public:
 	static DataManager* get() noexcept {
 		static DataManager instance{};
 
@@ -28,7 +31,7 @@ private:
 	~DataManager() noexcept = default;
 
 public:
-	std::stack<std::size_t>& getLoops() noexcept { return m_loops; }
+	Stack& getLoops() noexcept { return m_loops; }
 	std::vector<Token>& getTokens() noexcept { return m_tokens; }
 	CLIArgs const& getArgs() noexcept { return *m_args; }
 	void setArgs(CLIArgs const& args) noexcept { m_args = &args; }
@@ -37,7 +40,7 @@ public:
 	std::array<char, 64z>& getContext() noexcept { return m_context; }
 
 private: // Fields
-	std::stack<std::size_t> m_loops{};
+	Stack m_loops{};
 	std::vector<Token> m_tokens{};
 	CLIArgs const* m_args;
 	std::size_t m_line = 1z;

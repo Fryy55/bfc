@@ -15,6 +15,8 @@ else()
         set(ISA amd64)
     elseif (CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "arm64|aarch64")
         set(ISA arm64)
+    else()
+        message(FATAL_ERROR "Unsupported ISA (${CMAKE_HOST_SYSTEM_PROCESSOR})!")
     endif()
 
     if (${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Linux")
