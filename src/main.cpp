@@ -22,6 +22,10 @@ int main(int argc, char** argv) {
 		return 0;
 	} else if (args.version) {
 		fmt::println(fmt::fg(fmt::color::blue), "Brainfuck Compiler v" BFC_VERSION);
+		fmt::println(
+			fmt::fg(BFC_CROSSCOMPILING ? fmt::color::blue_violet : fmt::color::cadet_blue),
+			BFC_CROSSCOMPILER " " BFC_OS_NAME " on architecture " BFC_ISA " (ABI: " BFC_ABI ")"
+		);
 		return 0;
 	}
 

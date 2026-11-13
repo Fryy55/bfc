@@ -4,11 +4,15 @@ project(bfc VERSION 1.0.0)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(CROSSCOMPILER "Native compiler for")
+set(CROSSCOMPILING 0)
 if (DEFINED BFC_TARGET_SYSTEM)
     list(GET BFC_TARGET_SYSTEM 0 ISA)
     list(GET BFC_TARGET_SYSTEM 1 ABI)
     list(GET BFC_TARGET_SYSTEM 2 OS_NAME)
 
+    set(CROSSCOMPILER "Cross-compiler to")
+    set(CROSSCOMPILING 1)
     message(STATUS "Building a cross-compiler")
 else()
     if (CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
@@ -53,6 +57,11 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     BFC_VERSION="${PROJECT_VERSION}"
+    BFC_ISA="${ISA}"
+    BFC_ABI="${ABI}"
+    BFC_OS_NAME="${OS_NAME}"
+    BFC_CROSSCOMPILER="${CROSSCOMPILER}"
+    BFC_CROSSCOMPILING=${CROSSCOMPILING}
 )
 
 include(cmake/CPM.cmake)

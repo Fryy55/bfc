@@ -10,7 +10,11 @@
 
 
 static std::vector<std::uint8_t> generateText() noexcept {
-	return { 0xbf, 0x37, 0x00, 0x00, 0x00, 0xb8, 0x3c, 0x00, 0x00, 0x00, 0x0f, 0x05 };
+	std::vector<std::uint8_t> ret{};
+
+	
+
+	return ret;
 }
 
 #define rodata static constexpr
@@ -41,8 +45,8 @@ int buildSpecific(TempFile& file) noexcept {
 	rodata std::size_t sectionHeaderCount = 5z;
 	rodata std::size_t strTabIndex = 2z;
 	rodata std::size_t textIndex = 4z;
-	rodata std::array<char, 64z> sectionStringTable{ "\0.shstrtab\0.strtab\0.symtab\0.rodata\0.text" };
-	rodata std::array<char, 64z> symbolStringTable{ "\0_start\0tapeSize" };
+	rodata std::array<char, 64z> sectionStringTable{ "\0.shstrtab\0.strtab\0.symtab\0.text" };
+	rodata std::array<char, 64z> symbolStringTable{ "\0_start" };
 	auto name = [](std::string_view str, bool useSymStrTab = false) static consteval noexcept {
 		return useSymStrTab ?
 				std::string_view{ symbolStringTable.data(), symbolStringTable.size() }.find(str)
