@@ -1,6 +1,7 @@
 #include "buildSpecific.hpp"
 
 #include "endianConvert.hpp"
+#include "DataManager.hpp"
 
 #include <elf.h>
 
@@ -46,7 +47,7 @@ int buildSpecific(TempFile& file) noexcept {
 	rodata std::size_t strTabIndex = 2z;
 	rodata std::size_t textIndex = 4z;
 	rodata std::array<char, 64z> sectionStringTable{ "\0.shstrtab\0.strtab\0.symtab\0.text" };
-	rodata std::array<char, 64z> symbolStringTable{ "\0_start" };
+	rodata std::array<char, 64z> symbolStringTable{ "\0main\0tapeSize" };
 	auto name = [](std::string_view str, bool useSymStrTab = false) static consteval noexcept {
 		return useSymStrTab ?
 				std::string_view{ symbolStringTable.data(), symbolStringTable.size() }.find(str)
@@ -55,9 +56,10 @@ int buildSpecific(TempFile& file) noexcept {
 	};
 	/*
 		null
-		_start
+		main
+		tapeSize
 	*/
-	rodata std::size_t symbolCount = 2z;
+	rodata std::size_t symbolCount = 3z;
 	auto text = generateText();
 
 
@@ -201,16 +203,28 @@ int buildSpecific(TempFile& file) noexcept {
 	buf.sputn(TempFile::ptr(nullSym), sizeof(nullSym));
 
 
-	Elf64_Sym startSym;
+	Elf64_Sym mainSym;
 
-	endianConvert(startSym.st_name, name("_start", true));
-	startSym.st_value = 0u;
-	startSym.st_size = 0u;
-	startSym.st_info = ELF64_ST_INFO(STB_GLOBAL, STT_FUNC);
-	startSym.st_other = STV_DEFAULT;
-	endianConvert(startSym.st_shndx, textIndex);
+	endianConvert(mainSym.st_name, name("main", true));
+	mainSym.st_value = 0u;
+	mainSym.st_size = 0u;
+	mainSym.st_info = ELF64_ST_INFO(STB_GLOBAL, STT_FUNC);
+	mainSym.st_other = STV_DEFAULT;
+	endianConvert(mainSym.st_shndx, textIndex);
 
-	buf.sputn(TempFile::ptr(startSym), sizeof(startSym));
+	buf.sputn(TempFile::ptr(mainSym), sizeof(mainSym));
+
+
+	Elf64_Sym tapeSizeSym;
+
+	endianConvert(tapeSizeSym.st_name, name("tapeSize", true));
+	endianConvert(tapeSizeSym.st_value, DataManager::get()->getArgs().tapeSize);
+	tapeSizeSym.st_size = 0u;
+	tapeSizeSym.st_info = ELF64_ST_INFO(STB_GLOBAL, STT_NOTYPE);
+	tapeSizeSym.st_other = STV_HIDDEN; // preemption protection for pie linkage
+	endianConvert(tapeSizeSym.st_shndx, SHN_ABS);
+
+	buf.sputn(TempFile::ptr(tapeSizeSym), sizeof(tapeSizeSym));
 
 
 	// .text
