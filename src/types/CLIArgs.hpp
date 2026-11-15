@@ -20,6 +20,7 @@ struct CLIArgs final {
 	bool cmd = false;
 	bool dump = false;
 	bool debugPrints = false;
+	bool silentFail = false;
 
 	static constexpr std::string_view Description{ "Brainfuck Compiler" };
 	static constexpr std::tuple Options{
@@ -36,6 +37,7 @@ struct CLIArgs final {
 		slic::Option{ "--dump", "-d", &CLIArgs::dump, "Dump object files post compilation instead of linking them" },
 		slic::Option{ "--tmp-dir", "-T", &CLIArgs::tempDir, "Directory to use for temporary object files storage (default `/tmp`)" },
 		slic::Option{ "--debug-prints", &CLIArgs::debugPrints, "Print debug data for optimization passes. Mainly useful for the development of the compiler itself" },
+		slic::Option{ "--silent-fail", "-s", &CLIArgs::silentFail, "Silently fail on tape (de)allocation failures instead of writing to console" },
 		slic::Arg{ "SOURCE", &CLIArgs::source, "Source file/string" }
 	};
 };

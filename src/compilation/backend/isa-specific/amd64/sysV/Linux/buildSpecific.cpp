@@ -47,7 +47,7 @@ int buildSpecific(TempFile& file) noexcept {
 	rodata std::size_t strTabIndex = 2z;
 	rodata std::size_t textIndex = 4z;
 	rodata std::array<char, 64z> sectionStringTable{ "\0.shstrtab\0.strtab\0.symtab\0.text" };
-	rodata std::array<char, 64z> symbolStringTable{ "\0main\0tapeSize" };
+	rodata std::array<char, 64z> symbolStringTable{ "\0main\0tapeSize\0silentFail" };
 	auto name = [](std::string_view str, bool useSymStrTab = false) static consteval noexcept {
 		return useSymStrTab ?
 				std::string_view{ symbolStringTable.data(), symbolStringTable.size() }.find(str)
@@ -58,8 +58,9 @@ int buildSpecific(TempFile& file) noexcept {
 		null
 		main
 		tapeSize
+		silentFail
 	*/
-	rodata std::size_t symbolCount = 3z;
+	rodata std::size_t symbolCount = 4z;
 	auto text = generateText();
 
 
@@ -225,6 +226,21 @@ int buildSpecific(TempFile& file) noexcept {
 	endianConvert(tapeSizeSym.st_shndx, SHN_ABS);
 
 	buf.sputn(TempFile::ptr(tapeSizeSym), sizeof(tapeSizeSym));
+
+
+	Elf64_Sym silentFailSym;
+
+	endianConvert(silentFailSym.st_name, name("silentFail", true));
+	endianConvert(
+		silentFailSym.st_value,
+		DataManager::get()->getArgs().silentFail ? 1u : 0u
+	);
+	silentFailSym.st_size = 0u;
+	silentFailSym.st_info = ELF64_ST_INFO(STB_GLOBAL, STT_NOTYPE);
+	silentFailSym.st_other = STV_HIDDEN; // preemption protection for pie linkage
+	endianConvert(silentFailSym.st_shndx, SHN_ABS);
+
+	buf.sputn(TempFile::ptr(silentFailSym), sizeof(silentFailSym));
 
 
 	// .text
