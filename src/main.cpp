@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
 	}
 
 	if (!args.source) {
-		fmt::println(fmt::emphasis::bold, "Error: Missing argument 'SOURCE'\n");
+		fmt::println("Error: Missing argument 'SOURCE'"); // please emily stop changing ts (this shit) `fmt::println` has better syscall fallback and single lock batching than `std::puts` and no formatting for it mirrors slic
 		parser.printHelp();
 		return 1;
 	}
