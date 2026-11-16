@@ -15,6 +15,7 @@ struct CLIArgs final {
 	bool o1 = false;
 	bool o2 = false;
 	std::uint8_t o;
+	bool inlineCalls = false;
 	bool help = false;
 	bool version = false;
 	bool cmd = false;
@@ -30,6 +31,7 @@ struct CLIArgs final {
 		slic::Option{ "-O0", &CLIArgs::o0, "Disable all optimizations" },
 		slic::Option{ "-O1", &CLIArgs::o1, "Enable dead code elimination optimizations when possible (default)" },
 		slic::Option{ "-O2", &CLIArgs::o2, "Enable all -O1 optimizations + instruction collapsing (e.g. consecutive `+`s become a single add instruction)" },
+		slic::Option{ "--inline-calls", "-i", &CLIArgs::inlineCalls, "Inline data pointer bound checks and input/output calls. Removes their call overhead but may significantly increase binary size" },
 		slic::Option{ "--cli-source", "-c", &CLIArgs::cmd, "Read source code directly from the command string instead of the file specified by that string" },
 		slic::Option{ "--linker", "-L", &CLIArgs::linker, "Linker to use for the final executable (default `/usr/bin/ld`)" },
 		slic::Option{ "--linker-options", "-l", &CLIArgs::linkerOptions, "Options passed to the linker (default none)" },
@@ -37,7 +39,7 @@ struct CLIArgs final {
 		slic::Option{ "--dump", "-d", &CLIArgs::dump, "Dump object files post compilation instead of linking them" },
 		slic::Option{ "--tmp-dir", "-T", &CLIArgs::tempDir, "Directory to use for temporary object files storage (default `/tmp`)" },
 		slic::Option{ "--debug-prints", &CLIArgs::debugPrints, "Print debug data for optimization passes. Mainly useful for the development of the compiler itself" },
-		slic::Option{ "--silent-fail", "-s", &CLIArgs::silentFail, "Silently fail on tape (de)allocation failures instead of writing to console" },
+		slic::Option{ "--silent-fail", "-s", &CLIArgs::silentFail, "Make the final executable silently fail on tape (de)allocation failures instead of writing to console" },
 		slic::Arg{ "SOURCE", &CLIArgs::source, "Source file/string" }
 	};
 };
