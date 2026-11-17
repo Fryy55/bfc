@@ -1,5 +1,5 @@
 # Brainfuck Compiler
-My attempt at making a Brainfuck compiler from first principles
+My attempt at making a Brainfuck compiler from first principles, with no prior compiler design experience
 
 See [Cross-Compilation](#cross-compilation) below for all available system configuration
 
