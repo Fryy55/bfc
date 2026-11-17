@@ -3,6 +3,7 @@
 ;* rbx - scratch register
 ;? rax, rcx, r11 - syscall unusable (syscall #, ret, clobbers)
 ;? rsp, rbp - used conventionally (unusable as GPRs)
+;* rax - shift call argument
 ;
 ;  rdi, rdx - 1 (fd and size for read/write syscalls)
 ;* rsi - current tape pointer
@@ -35,19 +36,39 @@ section .text
 	extern main
 
 read:
-	; todo
+	xor eax, eax ; read
+	syscall
 	ret
 
 write:
-	; todo
+	mov eax, 1 ; write
+	syscall
 	ret
 
 shiftLeft:
-	; todo
+	sub rsi, rax
+
+	loopShL:
+	cmp r8, rsi
+	jbe contShL
+
+	add rsi, r10
+	jmp loopShL
+	contShL:
+
 	ret
 
 shiftRight:
-	; todo
+	add rsi, rax
+
+	loopShR:
+	cmp rsi, r9
+	jb contShR
+
+	sub rsi, r10
+	jmp loopShR
+	contShR:
+
 	ret
 
 
