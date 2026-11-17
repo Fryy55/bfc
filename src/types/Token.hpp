@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string_view>
 
 
 struct Token final {
@@ -14,6 +15,31 @@ struct Token final {
 		OpenLoop = 1u << 4z,
 		CloseLoop = 1u << 5z
 	};
+
+	static std::string_view typeToString(Token::Type x) noexcept {
+		switch (x) {
+			case Token::Type::Shift:
+				return "Shift";
+
+			case Token::Type::Add:
+				return "Add";
+
+			case Token::Type::Out:
+				return "Out";
+
+			case Token::Type::In:
+				return "In";
+
+			case Token::Type::OpenLoop:
+				return "OpenLoop";
+
+			case Token::Type::CloseLoop:
+				return "CloseLoop";
+
+			default:
+				return "UNK";
+		}
+	}
 
 
 	constexpr Token(Type type) : type{ type } {}

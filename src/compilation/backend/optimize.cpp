@@ -6,35 +6,11 @@
 
 #include <ranges>
 
-std::string_view foo(Token::Type x) noexcept {
-	switch (x) {
-		case Token::Type::Shift:
-			return "Shift";
 
-		case Token::Type::Add:
-			return "Add";
-
-		case Token::Type::Out:
-			return "Out";
-
-		case Token::Type::In:
-			return "In";
-
-		case Token::Type::OpenLoop:
-			return "OpenLoop";
-
-		case Token::Type::CloseLoop:
-			return "CloseLoop";
-
-		default:
-			return "UNK";
-	}
-}
-
-std::string format_as(Token const& t) {
+static std::string format_as(Token const& t) {
 	return fmt::format(
 		"{} | {} | {}",
-		t.valid ? "valid" : "invalid", foo(t.type), t.refVal
+		t.valid ? "valid" : "invalid", Token::typeToString(t.type), t.refVal
 	);
 }
 
@@ -56,7 +32,7 @@ void optimize() noexcept {
 			if (it == tokens.end() || it->type != Token::Type::OpenLoop)
 				break;
 
-			for (auto targetIndex = it->refVal; it.index() != targetIndex + 1z; ++it)
+			for (auto targetIndex = it->refVal; std::cmp_not_equal(it.index(), targetIndex + 1z); ++it)
 				it->valid = false;
 		}
 
