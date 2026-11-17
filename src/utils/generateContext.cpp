@@ -19,7 +19,7 @@ std::string generateContext(std::string_view data, std::size_t i) noexcept {
 	std::uint8_t realContextSize = 0u;
 	for (
 		auto rit = ret.rbegin();
-		std::isprint(static_cast<unsigned char>(*rit)) && rit != ret.rend();
+		rit != ret.rend() && std::isprint(static_cast<unsigned char>(*rit));
 		++rit
 	) ++realContextSize;
 
