@@ -7,12 +7,14 @@
 
 #include <elf.h>
 
+#include <fmt/color.h>
+
 #include <vector>
 #include <array>
 #include <cstring>
 
 
-static std::vector<std::uint8_t> generateText() noexcept {
+static std::vector<std::uint8_t> generateText() {
 	std::vector<std::uint8_t> ret{};
 	auto& args = DataManager::get()->getArgs();
 	using Bytes = std::initializer_list<std::uint8_t>;
@@ -128,6 +130,27 @@ static std::vector<std::uint8_t> generateText() noexcept {
 					}
 				}
 				break;
+
+			case Token::Type::Add: { //* token.refVal is guaranteed to be within [-255; 255]
+				auto oldVal = token.refVal;
+				token.refVal = std::abs(token.refVal);
+
+				if (oldVal == token.refVal) { // positive
+					//# add byte [rsi], imm8
+					//# 80-/0 Eb(no disp; 0.110), Ib
+					ret.append_range(Bytes{
+						0x80, 0b00'000'110,
+						static_cast<std::uint8_t>(token.refVal)
+					});
+				} else { // negative
+					//# sub byte [rsi], imm8
+					//# 80-/5 Eb(no disp; 0.110), Ib
+					ret.append_range(Bytes{
+						0x80, 0b00'101'110,
+						static_cast<std::uint8_t>(token.refVal)
+					});
+				}
+			} break;
 		}
 	}
 
@@ -180,7 +203,17 @@ int buildSpecific(TempFile& file) noexcept {
 		silentFail
 	*/
 	rodata std::size_t symbolCount = 4z;
-	auto text = generateText();
+	std::vector<std::uint8_t> text;
+	try {
+		text = generateText();
+	} catch (std::exception const& e) {
+		fmt::println(
+			fmt::fg(fmt::color::crimson),
+			"-- Error while generating machine code: {}",
+			fmt::styled(e.what(), fmt::emphasis::bold)
+		);
+		return 1;
+	}
 
 
 //* elf header

@@ -43,7 +43,7 @@ void optimize() noexcept {
 	if (args.o >= 2u) {
 		using Type = Token::Type;
 
-		auto lastTokenType = static_cast<Type>(0u);
+		auto lastTokenType = Type::None;
 		Token* lastToken = nullptr;
 		auto updateLastToken = [&lastToken](Token* token) noexcept {
 			if (lastToken && lastToken->refVal == 0)
