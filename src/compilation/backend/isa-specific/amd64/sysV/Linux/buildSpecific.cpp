@@ -1,7 +1,9 @@
 #include "buildSpecific.hpp"
 
+#include "TokensIterator.hpp"
+#include "fits32.hpp"
+#include "amd64/movImm.hpp"
 #include "endianConvert.hpp"
-#include "DataManager.hpp"
 
 #include <elf.h>
 
@@ -12,9 +14,126 @@
 
 static std::vector<std::uint8_t> generateText() noexcept {
 	std::vector<std::uint8_t> ret{};
+	auto& args = DataManager::get()->getArgs();
+	using Bytes = std::initializer_list<std::uint8_t>;
 
-	
+	for (auto& token : TokensIterator{}) {
+		switch (token.type) {
+			case Token::Type::Shift:
+				if (args.inlineCalls) {
+					bool isImm = fits32(token.refVal);
+					if (!isImm)
+						ret.append_range(movImm(amd64::Reg::A, token.refVal));
 
+					if (token.refVal < 0) { // left
+						/*
+							?                    3 + 2 = 5
+							?                    +-------+
+							?                    |       |
+							?                   rip      v
+							? sub lShL: cmp jbe add jmp cShL:
+							? 7/3       3   2   3   2   rip
+							?           ^                |
+							?           +----------------+
+							?  -(3 + 2 + 3 + 2) = -10 = 0b1111'0110
+						*/
+
+						if (isImm) {
+							std::uint32_t immVal;
+							endianConvert(immVal, token.refVal);
+							auto immBytes = std::bit_cast<std::array<std::uint8_t, 4z>>(immVal);
+
+							//# sub rsi, imm32
+							//# REX.Wrxb(d32) 81-/5 Ev(0.110), Iz
+							ret.append_range(Bytes{
+								0b0100'1000, 0x81, 0b11'101'110,
+								immBytes[0z], immBytes[1z], immBytes[2z], immBytes[3z]
+							});
+						} else {
+							//# sub rsi, rax
+							//# REX.Wrxb(d32) 29 Ev(0.110), Gv(0.000)
+							ret.append_range(Bytes{ 0b0100'1000, 0x29, 0b11'000'110 });
+						}
+
+						//* loopShl:
+						//# cmp r8, rsi
+						//# REX.WrxB(d32) 39 Ev(1.000), Gv(0.110)
+						ret.append_range(Bytes{ 0b0100'1001, 0x39, 0b11'110'000 });
+						//# jbe rip+contShL
+						//# (f64) 76 Jb(chart above)
+						ret.append_range(Bytes{ 0x76, 5 });
+
+						//# add rsi, r10
+						//# REX.WRxb(d32) 01 Ev(0.110), Gv(1.010)
+						ret.append_range(Bytes{ 0b0100'1100, 0x01, 0b11'010'110 });
+						//# jmp rip+loopShL
+						//# (f64) eb Jb(chart above)
+						ret.append_range(Bytes{ 0xeb, 0b1111'0110 });
+					} else { // right
+						/*
+							?                   3 + 2 = 5
+							?                   +-------+
+							?                   |       |
+							?                  rip      v
+							? add lShR: cmp jb sub jmp cShR:
+							? 7/3       3   2  3   2   rip
+							?           ^               |
+							?           +---------------+
+							?  -(3 + 2 + 3 + 2) = -10 = 0b1111'0110
+						*/
+
+						if (isImm) {
+							std::uint32_t immVal;
+							endianConvert(immVal, token.refVal);
+							auto immBytes = std::bit_cast<std::array<std::uint8_t, 4z>>(immVal);
+
+							//# add rsi, imm32
+							//# REX.Wrxb(d32) 81-/0 Ev(0.110), Iz
+							ret.append_range(Bytes{
+								0b0100'1000, 0x81, 0b11'000'110,
+								immBytes[0z], immBytes[1z], immBytes[2z], immBytes[3z]
+							});
+						} else {
+							//# add rsi, rax
+							//# REX.Wrxb(d32) 01 Ev(0.110), Gv(0.000)
+							ret.append_range(Bytes{ 0b0100'1000, 0x01, 0b11'000'110 });
+						}
+
+						//* loopShl:
+						//# cmp rsi, r9
+						//# REX.WRxb(d32) 39 Ev(0.110), Gv(1.001)
+						ret.append_range(Bytes{ 0b0100'1100, 0x39, 0b11'001'110 });
+						//# jb rip+contShR
+						//# (f64) 72 Jb(chart above)
+						ret.append_range(Bytes{ 0x72, 5 });
+
+						//# sub rsi, r10
+						//# REX.WRxb(d32) 29 Ev(0.110), Gv(1.010)
+						ret.append_range(Bytes{ 0b0100'1100, 0x29, 0b11'010'110 });
+						//# jmp rip+loopShR
+						//# (f64) eb Jb(chart above)
+						ret.append_range(Bytes{ 0xeb, 0b1111'0110 });
+					}
+				} else { // indirect call
+					//# mov rax, shift
+					ret.append_range(movImm(amd64::Reg::A, std::abs(token.refVal)));
+					if (token.refVal < 0) { // left
+						//# call r14
+						//# REX.wrxB(f64) ff-/2 Ev(1.110)
+						ret.append_range(Bytes{ 0b0100'0001, 0xff, 0b11'010'110 });
+					} else { // right
+						//# call r15
+						//# REX.wrxB(f64) ff-/2 Ev(1.111)
+						ret.append_range(Bytes{ 0b0100'0001, 0xff, 0b11'010'111 });
+					}
+				}
+				break;
+		}
+	}
+
+	//# ret
+	//# c3
+	ret.emplace_back(0xc3);
 	return ret;
 }
 
@@ -65,7 +184,7 @@ int buildSpecific(TempFile& file) noexcept {
 
 
 //* elf header
-	Elf64_Ehdr elfHeader;
+	Elf64_Ehdr elfHeader{};
 
 	elfHeader.e_ident[EI_MAG0] = 0x7f;
 	elfHeader.e_ident[EI_MAG1] = 'E';
@@ -97,7 +216,7 @@ int buildSpecific(TempFile& file) noexcept {
 
 //* section header table
 	// null
-	Elf64_Shdr nullSectHeader;
+	Elf64_Shdr nullSectHeader{};
 
 	nullSectHeader.sh_name = 0u;
 	endianConvert(nullSectHeader.sh_type, SHT_NULL);
@@ -115,7 +234,7 @@ int buildSpecific(TempFile& file) noexcept {
 
 
 	// .shstrtab
-	Elf64_Shdr sectionStringHeader;
+	Elf64_Shdr sectionStringHeader{};
 
 	endianConvert(sectionStringHeader.sh_name, name(".shstrtab"));
 	endianConvert(sectionStringHeader.sh_type, SHT_STRTAB);
@@ -133,7 +252,7 @@ int buildSpecific(TempFile& file) noexcept {
 
 
 	// .strtab
-	Elf64_Shdr symbolStringHeader;
+	Elf64_Shdr symbolStringHeader{};
 
 	endianConvert(symbolStringHeader.sh_name, name(".strtab"));
 	endianConvert(symbolStringHeader.sh_type, SHT_STRTAB);
@@ -151,7 +270,7 @@ int buildSpecific(TempFile& file) noexcept {
 
 
 	// .symtab
-	Elf64_Shdr symbolTableHeader;
+	Elf64_Shdr symbolTableHeader{};
 
 	endianConvert(symbolTableHeader.sh_name, name(".symtab"));
 	endianConvert(symbolTableHeader.sh_type, SHT_SYMTAB);
@@ -169,7 +288,7 @@ int buildSpecific(TempFile& file) noexcept {
 
 
 	// .text
-	Elf64_Shdr textHeader;
+	Elf64_Shdr textHeader{};
 
 	endianConvert(textHeader.sh_name, name(".text"));
 	endianConvert(textHeader.sh_type, SHT_PROGBITS);
@@ -192,7 +311,7 @@ int buildSpecific(TempFile& file) noexcept {
 
 	// .symtab
 	//? one local symbol, sh_info on .symtab is 1
-	Elf64_Sym nullSym;
+	Elf64_Sym nullSym{};
 
 	nullSym.st_name = 0u;
 	nullSym.st_value = 0u;
@@ -204,7 +323,7 @@ int buildSpecific(TempFile& file) noexcept {
 	buf.sputn(TempFile::ptr(nullSym), sizeof(nullSym));
 
 
-	Elf64_Sym mainSym;
+	Elf64_Sym mainSym{};
 
 	endianConvert(mainSym.st_name, name("main", true));
 	mainSym.st_value = 0u;
@@ -216,7 +335,7 @@ int buildSpecific(TempFile& file) noexcept {
 	buf.sputn(TempFile::ptr(mainSym), sizeof(mainSym));
 
 
-	Elf64_Sym tapeSizeSym;
+	Elf64_Sym tapeSizeSym{};
 
 	endianConvert(tapeSizeSym.st_name, name("tapeSize", true));
 	endianConvert(tapeSizeSym.st_value, DataManager::get()->getArgs().tapeSize);
@@ -228,7 +347,7 @@ int buildSpecific(TempFile& file) noexcept {
 	buf.sputn(TempFile::ptr(tapeSizeSym), sizeof(tapeSizeSym));
 
 
-	Elf64_Sym silentFailSym;
+	Elf64_Sym silentFailSym{};
 
 	endianConvert(silentFailSym.st_name, name("silentFail", true));
 	endianConvert(
