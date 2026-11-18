@@ -151,6 +151,32 @@ static std::vector<std::uint8_t> generateText() {
 					});
 				}
 			} break;
+
+			case Token::Type::Out:
+				if (args.inlineCalls) {
+					ret.append_range(movImm(amd64::Reg::A, 1));
+					//# syscall
+					//# 0f 05
+					ret.append_range(Bytes{ 0x0f, 0x05 });
+				} else { // indirect call
+					//# call r13
+					//# REX.wrxB(f64) ff-/2 Ev(1.101)
+					ret.append_range(Bytes{ 0b0100'0001, 0xff, 0b11'010'101 });
+				}
+				break;
+
+			case Token::Type::In:
+				if (args.inlineCalls) {
+					ret.append_range(movImm(amd64::Reg::A, 0));
+					//# syscall
+					//# 0f 05
+					ret.append_range(Bytes{ 0x0f, 0x05 });
+				} else { // indirect call
+					//# call r12
+					//# REX.wrxB(f64) ff-/2 Ev(1.100)
+					ret.append_range(Bytes{ 0b0100'0001, 0xff, 0b11'010'100 });
+				}
+				break;
 		}
 	}
 
