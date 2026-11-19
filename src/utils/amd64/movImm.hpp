@@ -72,6 +72,8 @@ struct MovInstruction final {
 };
 
 
+//! tracking last movs is useless since most of the time it's mov to rax,
+//! which is immediately overridden with syscall
 [[nodiscard]] MovInstruction movImm(Reg reg, std::int64_t imm) noexcept;
 
 } // namespace amd64

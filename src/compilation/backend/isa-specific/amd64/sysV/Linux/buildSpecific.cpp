@@ -136,19 +136,31 @@ static std::vector<std::uint8_t> generateText() {
 				token.refVal = std::abs(token.refVal);
 
 				if (oldVal == token.refVal) { // positive
-					//# add byte [rsi], imm8
-					//# 80-/0 Eb(no disp; 0.110), Ib
-					ret.append_range(Bytes{
-						0x80, 0b00'000'110,
-						static_cast<std::uint8_t>(token.refVal)
-					});
+					if (token.refVal == 1) {
+						//# inc byte [rsi]
+						//# fe-/0 Eb(no disp; 0.110)
+						ret.append_range(Bytes{ 0xfe, 0b00'000'110 });
+					} else {
+						//# add byte [rsi], imm8
+						//# 80-/0 Eb(no disp; 0.110), Ib
+						ret.append_range(Bytes{
+							0x80, 0b00'000'110,
+							static_cast<std::uint8_t>(token.refVal)
+						});
+					}
 				} else { // negative
-					//# sub byte [rsi], imm8
-					//# 80-/5 Eb(no disp; 0.110), Ib
-					ret.append_range(Bytes{
-						0x80, 0b00'101'110,
-						static_cast<std::uint8_t>(token.refVal)
-					});
+					if (token.refVal == 1) {
+						//# dec byte [rsi]
+						//# fe-/1 Eb(no disp; 0.110)
+						ret.append_range(Bytes{ 0xfe, 0b00'001'110 });
+					} else {
+						//# sub byte [rsi], imm8
+						//# 80-/5 Eb(no disp; 0.110), Ib
+						ret.append_range(Bytes{
+							0x80, 0b00'101'110,
+							static_cast<std::uint8_t>(token.refVal)
+						});
+					}
 				}
 			} break;
 
@@ -177,6 +189,16 @@ static std::vector<std::uint8_t> generateText() {
 					ret.append_range(Bytes{ 0b0100'0001, 0xff, 0b11'010'100 });
 				}
 				break;
+
+			case Token::Type::OpenLoop: //* validity of matching `[`/`]` tokens is guaranteed
+				// todo
+				break;
+
+			case Token::Type::CloseLoop:
+				break;
+
+			default:
+				throw std::runtime_error{ "invalid token of type `None`" };
 		}
 	}
 
