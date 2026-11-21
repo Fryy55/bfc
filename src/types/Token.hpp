@@ -18,6 +18,10 @@ struct Token final {
 
 	static std::string_view typeToString(Token::Type x) noexcept {
 		switch (x) {
+			case Token::Type::None:
+				return "None";
+
+
 			case Token::Type::Shift:
 				return "Shift";
 

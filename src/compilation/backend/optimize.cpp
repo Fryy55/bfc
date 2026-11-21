@@ -9,8 +9,8 @@
 
 static std::string format_as(Token const& t) {
 	return fmt::format(
-		"{} | {} | {}",
-		t.valid ? "valid" : "invalid", Token::typeToString(t.type), t.refVal
+		"{} | {:^12} | {}",
+		t.valid ? " valid " : "invalid", Token::typeToString(t.type), t.refVal
 	);
 }
 

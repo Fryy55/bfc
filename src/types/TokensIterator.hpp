@@ -22,17 +22,16 @@ public:
 
 public:
 	static TokensIterator begin() noexcept {
-		return std::to_address(std::ranges::find_if(
-			s_tokens, [](Token const& x) { return x.valid; }
-		));
+		auto it = std::ranges::find_if(
+			s_tokens,
+			[](Token const& x) constexpr static noexcept { return x.valid; }
+		);
+
+		return it == s_tokens.end() ? nullptr : std::to_address(it);
 	}
 
 	static TokensIterator end() noexcept {
-		auto range = std::ranges::find_last_if(
-			s_tokens, [](Token const& x) { return x.valid; }
-		);
-
-		return std::to_address(range.empty() ? range.begin() : range.begin() + 1z);
+		return nullptr;
 	}
 
 	constexpr TokensIterator operator+(std::size_t x) const noexcept {
@@ -44,10 +43,12 @@ public:
 	}
 
 	constexpr TokensIterator& operator++() noexcept {
-		m_ptr = std::to_address(std::ranges::find_if(
+		auto ptr = std::ranges::find_if(
 			m_ptr + 1z, std::to_address(s_tokens.end()),
-			[](Token const& x) { return x.valid; }
-		));
+			[](Token const& x) constexpr static noexcept { return x.valid; }
+		);
+
+		m_ptr = (ptr == std::to_address(s_tokens.end())) ? nullptr : ptr;
 
 		return *this;
 	}
@@ -64,13 +65,9 @@ public:
 
 	constexpr Token* operator->() const noexcept { return m_ptr; }
 
-	constexpr bool operator==(TokensIterator const& other) const noexcept {
-		return m_ptr == other.m_ptr;
-	}
+	constexpr auto operator<=>(TokensIterator const& other) const noexcept = default;
 
-	constexpr bool operator!=(TokensIterator const& other) const noexcept {
-		return m_ptr != other.m_ptr;
-	}
+	constexpr bool operator==(TokensIterator const& other) const noexcept = default;
 
 	[[nodiscard]] constexpr std::size_t index() const noexcept {
 		return m_ptr - s_tokens.data();
@@ -80,12 +77,12 @@ private:
 	using TokensStdIt = std::remove_cvref_t<decltype(DataManager::get()->getTokens())>::iterator;
 
 public:
-	constexpr bool operator==(TokensStdIt const& it) const noexcept {
-		return m_ptr == std::to_address(it);
+	constexpr auto operator<=>(TokensStdIt const& it) const noexcept {
+		return m_ptr <=> std::to_address(it);
 	}
 
-	constexpr bool operator!=(TokensStdIt const& it) const noexcept {
-		return m_ptr != std::to_address(it);
+	constexpr bool operator==(TokensStdIt const& it) const noexcept {
+		return m_ptr == std::to_address(it);
 	}
 
 private: // Fields

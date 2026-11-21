@@ -1,5 +1,6 @@
 #include "buildSpecific.hpp"
 
+#include "DataManager.hpp"
 #include "TokensIterator.hpp"
 #include "fits32.hpp"
 #include "amd64/movImm.hpp"
@@ -14,7 +15,7 @@
 #include <cstring>
 
 
-static std::vector<std::uint8_t> generateText() {
+[[nodiscard]] static std::vector<std::uint8_t> generateText() {
 	std::vector<std::uint8_t> ret{};
 	auto& args = DataManager::get()->getArgs();
 	using Bytes = std::initializer_list<std::uint8_t>;
@@ -190,16 +191,91 @@ static std::vector<std::uint8_t> generateText() {
 				}
 				break;
 
-			case Token::Type::OpenLoop: //* validity of matching `[`/`]` tokens is guaranteed
-				// todo
-				break;
+			//* validity of matching `[`/`]` tokens is guaranteed by the frontend
+			/*
+				?     sizes
+				?     ( n ) x
+				? , [  ++>  ] .
+				?   ^  ^    ^ ^
+				?   |  loop | cont:
+				?   |       test byte [rsi], 0xff; jnz rip-???(loop)
+				?   test byte [rsi], 0xff; jz rip+???(cont)
+				?
+				? ??? = n + x
+				?
+				? jz/jnz rip+disp8  | 74/75 disp8     | 2 bytes
+				? jz/jnz rip+disp32 | 0f 84/85 disp32 | 6 bytes
+			*/
+			case Token::Type::OpenLoop: {
+				//# test byte [rsi], 0xff
+				//# f6-/0 Ev(0.110) Ib
+				std::array<std::uint8_t, 3z> testInstr{
+					0xf6, 0b00'000'110, 0xff
+				};
+
+				token.valid = false;
+				auto loopText = generateText();
+				std::size_t n = loopText.size();
+				bool disp8 = false;
+
+				ret.append_range(testInstr);
+				// disp8 = [-128; 127] =>
+				// => to fit, n + x <= 127; n + 2 <= 127
+				if (n + 2z <= 127z) { // fits disp8 both ways
+					//# jz rip+disp8
+					//# (f64) 74 Jb
+					ret.append_range(Bytes{
+						0x74, static_cast<std::uint8_t>(n + 2z)
+					});
+
+					disp8 = true;
+				} else {
+					std::int32_t dispVal;
+					endianConvert(dispVal, n + 6z);
+					auto dispBytes = std::bit_cast<std::array<std::uint8_t, 4z>>(dispVal);
+
+					//# jz rip+disp32
+					//# (f64) 0f 84 Jd
+					ret.append_range(Bytes{
+						0x0f, 0x84,
+						dispBytes[0z], dispBytes[1z], dispBytes[2z], dispBytes[3z]
+					});
+				}
+
+				ret.append_range(std::move(loopText));
+
+				ret.append_range(testInstr);
+				if (disp8) {
+					//# jnz rip+disp8
+					//# (f64) 75 Jb
+					ret.append_range(Bytes{
+						0x75, static_cast<std::uint8_t>(-(n + 2z))
+					});
+
+					disp8 = true;
+				} else {
+					std::int32_t dispVal;
+					endianConvert(dispVal, -(n + 6z));
+					auto dispBytes = std::bit_cast<std::array<std::uint8_t, 4z>>(dispVal);
+
+					//# jnz rip+disp32
+					//# (f64) 0f 85 Jd
+					ret.append_range(Bytes{
+						0x0f, 0x85,
+						dispBytes[0z], dispBytes[1z], dispBytes[2z], dispBytes[3z]
+					});
+				}
+			} break;
 
 			case Token::Type::CloseLoop:
-				break;
+				token.valid = false;
+				return ret;
 
 			default:
-				throw std::runtime_error{ "invalid token of type `None`" };
+				throw std::runtime_error{ fmt::format("invalid token of type '{}'", Token::typeToString(token.type)) };
 		}
+
+		token.valid = false;
 	}
 
 	//# ret
