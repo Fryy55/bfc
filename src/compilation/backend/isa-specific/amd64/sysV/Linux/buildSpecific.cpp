@@ -26,7 +26,7 @@
 				if (args.inlineCalls) {
 					bool isImm = fits32(token.refVal);
 					if (!isImm)
-						ret.append_range(movImm(amd64::Reg::A, token.refVal));
+						ret.append_range(movImm(amd64::Reg::A, std::abs(token.refVal)));
 
 					if (token.refVal < 0) { // left
 						/*
@@ -43,7 +43,7 @@
 
 						if (isImm) {
 							std::uint32_t immVal;
-							endianConvert(immVal, token.refVal);
+							endianConvert(immVal, std::abs(token.refVal));
 							auto immBytes = std::bit_cast<std::array<std::uint8_t, 4z>>(immVal);
 
 							//# sub rsi, imm32
@@ -87,7 +87,7 @@
 
 						if (isImm) {
 							std::uint32_t immVal;
-							endianConvert(immVal, token.refVal);
+							endianConvert(immVal, std::abs(token.refVal));
 							auto immBytes = std::bit_cast<std::array<std::uint8_t, 4z>>(immVal);
 
 							//# add rsi, imm32
@@ -202,6 +202,7 @@
 				?   test byte [rsi], 0xff; jz rip+???(cont)
 				?
 				? ??? = n + x
+				? x = 3 + 2/6 = 5/9
 				?
 				? jz/jnz rip+disp8  | 74/75 disp8     | 2 bytes
 				? jz/jnz rip+disp32 | 0f 84/85 disp32 | 6 bytes
@@ -220,18 +221,18 @@
 
 				ret.append_range(testInstr);
 				// disp8 = [-128; 127] =>
-				// => to fit, n + x <= 127; n + 2 <= 127
-				if (n + 2z <= 127z) { // fits disp8 both ways
+				// => to fit, n + x <= 127; n + 5 <= 127
+				if (n + 5z <= 127z) { // fits disp8 both ways
 					//# jz rip+disp8
 					//# (f64) 74 Jb
 					ret.append_range(Bytes{
-						0x74, static_cast<std::uint8_t>(n + 2z)
+						0x74, static_cast<std::uint8_t>(n + 5z)
 					});
 
 					disp8 = true;
 				} else {
 					std::int32_t dispVal;
-					endianConvert(dispVal, n + 6z);
+					endianConvert(dispVal, n + 9z);
 					auto dispBytes = std::bit_cast<std::array<std::uint8_t, 4z>>(dispVal);
 
 					//# jz rip+disp32
@@ -249,13 +250,13 @@
 					//# jnz rip+disp8
 					//# (f64) 75 Jb
 					ret.append_range(Bytes{
-						0x75, static_cast<std::uint8_t>(-(n + 2z))
+						0x75, static_cast<std::uint8_t>(-(n + 5z))
 					});
 
 					disp8 = true;
 				} else {
 					std::int32_t dispVal;
-					endianConvert(dispVal, -(n + 6z));
+					endianConvert(dispVal, -(n + 9z));
 					auto dispBytes = std::bit_cast<std::array<std::uint8_t, 4z>>(dispVal);
 
 					//# jnz rip+disp32
